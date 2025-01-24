@@ -66,5 +66,10 @@ Refer to the architecture diagram for a visual representation of the system.
 - `docker-compose.yml`: Configuration for Docker Compose to run Kafka and Spark.
 - `jobs/spark-city.py`: Contains Spark Structured Streaming jobs.
 
+## Credits
+
+This project was inspired by the tutorial from @CodeWithYu (https://www.youtube.com/watch?v=Vv_fvwF41_0).  
+- Thank you to @CodeWithYu for their amazing tutorial on Kafka and Spark.
+
 ## License
 This project is licensed under the MIT License. See the LICENSE file for details.
