@@ -11,12 +11,14 @@ def simulate_temperature_api_call(lat, lon):
         
         # Send a GET request to the API
         response = requests.get(url)
+        if response.status_code!=200:
+            raise Exception
         return response
     except:
         mock_response = MagicMock()
         mock_response.status_code = 200
         temp = 13 + random.uniform(-1, b=2)
-        mock_response.json.return_value = {{
+        mock_response.json.return_value = {
                                             "coord": {
                                                 "lon": lat,
                                                 "lat": lon
@@ -42,5 +44,8 @@ def simulate_temperature_api_call(lat, lon):
                                             },
                                             "visibility": 10000,
                                             "timezone": 0000,
-                                            }}
+                                            }
         return mock_response
+
+if __name__=="__main__":
+    print(simulate_temperature_api_call(1,2).json())

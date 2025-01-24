@@ -1,4 +1,5 @@
 import os
+import time
 from confluent_kafka import SerializingProducer
 import simplejson as json
 from datetime import datetime, timedelta
@@ -63,8 +64,11 @@ def get_vehicle_location():
     # add randomness to increment
     start_location['latitude']+=random.uniform(-0.0005, 0.0005)
     start_location['longitude']+=random.uniform(-0.0005, 0.0005)
+
+    flag = start_location['latitude']>=BIRMINGHAM_COORDINATES['latitude'] and \
+           start_location['longitude']<=BIRMINGHAM_COORDINATES['longitude']
     
-    return start_location
+    return flag, start_location
 
 def get_next_time():
     global current_time
@@ -109,6 +113,7 @@ def generate_vehicle_data(device):
         "batteryVoltage": round(battery_voltage, 2),
         "tirePressure": round(tire_pressure, 2),
         "engineRpm": round(rpm, 0),
+        'speed': random.uniform(a=0, b=40),
         "throttlePosition": round(throttle_position, 2),
         "mileage": round(mileage, 2),
         "ambientTemperature": round(ambient_temperature, 2),
@@ -119,12 +124,11 @@ def generate_vehicle_data(device):
     }
 
 def generate_gps_data(device_id, timestamp, vehicle_type='private'):
-    location = get_vehicle_location()
-    return {
+    flag, location = get_vehicle_location()
+    return flag, {
         'id': uuid.uuid4(),
-        'devideId': device_id,
+        'deviceId': device_id,
         'timestamp': timestamp,
-        'speed': random.uniform(a=0, b=40),
         "altitude": location['altitude'],
         'direction': 'ne',
         'accuracy': random.uniform(3, 10),
@@ -138,7 +142,7 @@ def generate_traffic_camera_data(device_id, timestamp, location, camera_id):
     time_in_seconds = time_delta.total_seconds()
     return {
         'id': uuid.uuid4(),
-        'devideId': device_id,
+        'deviceId': device_id,
         'timestamp': timestamp,
         'location': location,
         'cameraId': camera_id,
@@ -148,16 +152,16 @@ def generate_traffic_camera_data(device_id, timestamp, location, camera_id):
 def generate_weather_data(device_id, timestamp, location):
     return {
         'id': uuid.uuid4(),
-        'devideId': device_id,
+        'deviceId': device_id,
         'timestamp': timestamp,
         'location': location,
-        'weatherData': get_temperature_data(location)
+        'weatherData': json.dumps(get_temperature_data(location))
     }
 
 def generate_emergency_data(device_id, timestamp, location):
     return {
         'id': uuid.uuid4(),
-        'devideId': device_id,
+        'deviceId': device_id,
         'timestamp': timestamp,
         'location': location,
         'incidentId': uuid.uuid4(),
@@ -186,10 +190,13 @@ def produce_data_to_kafka(producer: SerializingProducer, topic, data):
         on_delivery=delivery_report
     )
 
+    producer.flush()
+
 def simulate_journey(producer, device):
+    flag = True
     while True:
         vehicle_data = generate_vehicle_data(device)
-        gps_data = generate_gps_data(device, vehicle_data['timestamp'])
+        flag, gps_data = generate_gps_data(device, vehicle_data['timestamp'])
         traffic_data = generate_traffic_camera_data(device, vehicle_data['timestamp'], gps_data['location'], 0)
         weather_data = generate_weather_data(device, vehicle_data['timestamp'], gps_data['location'])
         emergency_data = generate_emergency_data(device, vehicle_data['timestamp'], gps_data['location'])
@@ -200,7 +207,7 @@ def simulate_journey(producer, device):
         produce_data_to_kafka(producer, WEATHER_TOPIC, weather_data)
         produce_data_to_kafka(producer, EMERGENCY_TOPIC, emergency_data)
 
-        break
+        time.sleep(2)
 
 
 if __name__=="__main__":
